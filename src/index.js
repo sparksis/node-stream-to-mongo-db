@@ -17,7 +17,7 @@ module.exports = {
     let client;
     let dbConnection;
     let collection;
-    let records = [];
+    let uncommitedRecords = [];
 
     const open = async () => {
       if (config.dbConnection) {
@@ -30,10 +30,10 @@ module.exports = {
       if (!collection) collection = await dbConnection.collection(config.collection);
     }
 
-    // this function is usefull to insert records and reset the records array
+    // this function is usefull to insert uncommitedRecords and reset the uncommitedRecords array
     const insert = async () => {
-      await collection.insertMany(records, config.insertOptions);
-      records = [];
+      await collection.insertMany(uncommitedRecords, config.insertOptions);
+      uncommitedRecords = [];
     };
 
     const close = async () => {
@@ -54,18 +54,18 @@ module.exports = {
           await open();
         }
 
-        // add to batch records
-        records.push(record);
+        // add to batch uncommitedRecords
+        uncommitedRecords.push(record);
 
         // insert and reset batch recors
-        if (records.length >= config.batchSize) await insert();
+        if (uncommitedRecords.length >= config.batchSize) await insert();
 
         // next stream
         next();
       },
       final: async (done) => {
         try {
-          if (records.length > 0) await insert();
+          if (uncommitedRecords.length > 0) await insert();
           done();
         } catch (error) {
           done(error);
