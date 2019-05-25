@@ -63,6 +63,12 @@ module.exports = {
         // next stream
         next();
       },
+      writev: async (chunks, next) => {
+        if (!dbConnection) await open();
+        uncommitedRecords = uncommitedRecords.concat(chunks.map(chunk => chunk.chunk));
+        await insert(); // ensure we commit this data as drain is likely needed.
+        next();
+      },
       final: async (done) => {
         try {
           if (uncommitedRecords.length > 0) await insert();
